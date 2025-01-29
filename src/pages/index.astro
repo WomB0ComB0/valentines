@@ -1,11 +1,75 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
+import { letterAtom } from '@/store';
+import '@/styles/globals.css';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const { letter, setLetter } = letterAtom;
+const [isLoading, setIsLoading] = useState(false);
+
+async function generateLetter(event) {
+  event.preventDefault();
+  setIsLoading(true);
+
+  const formData = new FormData(event.target);
+  const recipient = formData.get('recipient');
+  const relationship = formData.get('relationship');
+  const tone = formData.get('tone');
+  const details = formData.get('details');
+
+  const response = await fetch('/api/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ recipient, relationship, tone, details }),
+  });
+
+  const data = await response.json();
+  setLetter(data.letter);
+  setIsLoading(false);
+}
 ---
 
 <Layout>
-	<Welcome />
+  <h1>Love Letter Generator</h1>
+  <form onSubmit={generateLetter}>
+    <label>
+      Recipient's Name:
+      <input type="text" name="recipient" required />
+    </label>
+    
+    <label>
+      Your Relationship:
+      <select name="relationship" required>
+        <option value="partner">Partner</option>
+        <option value="crush">Crush</option>
+        <option value="spouse">Spouse</option>
+      </select>
+    </label>
+    
+    <label>
+      Tone:
+      <select name="tone" required>
+        <option value="romantic">Romantic</option>
+        <option value="playful">Playful</option>
+        <option value="poetic">Poetic</option>
+      </select>
+    </label>
+    
+    <label>
+      Special Details:
+      <textarea name="details" placeholder="Include any special memories or details..."></textarea>
+    </label>
+    
+    <button type="submit" disabled={isLoading}>
+      {isLoading ? 'Generating...' : 'Generate Love Letter'}
+    </button>
+  </form>
+
+  {letter && (
+    <div class="letter-output">
+      <h2>Your Love Letter</h2>
+      <p>{letter}</p>
+    </div>
+  )}
 </Layout>
