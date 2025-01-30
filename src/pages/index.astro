@@ -13,33 +13,36 @@ let error = ""
 if (Astro.request.method === "POST") {
   try {
     isLoading = true
-    const data = await Astro.request.formData()
-    const formData = new URLSearchParams()
-    formData.append("recipient", data.get("recipient") as string)
-    formData.append("relationship", data.get("relationship") as string)
-    formData.append("tone", data.get("tone") as string)
-    formData.append("details", data.get("details") as string)
 
-    const response = await fetch(`${Astro.url}api/generate.json`, {
+    // Get form data directly from the request
+    const formData = await Astro.request.formData()
+
+    // Log the data being sent
+    console.log("Sending data:", Object.fromEntries(formData))
+
+    // Send the form data to the API
+    const response = await fetch(`${Astro.url.origin}/api/generate.json`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
+      body: formData, // Send FormData directly
     })
 
     if (!response.ok) {
-      throw new Error("Failed to generate letter")
+      const errorText = await response.text()
+      console.error("API Error:", errorText)
+      throw new Error(`Failed to generate letter: ${errorText}`)
     }
 
     const result: GenerateResponse = await response.json()
     letter = result.letter
+    console.log("Generated letter:", letter)
   } catch (e) {
+    console.error("Error:", e)
     error = e instanceof Error ? e.message : "An unexpected error occurred"
   } finally {
     isLoading = false
   }
 }
+
 ---
 
 <Layout title="Love Letter Generator">
@@ -54,7 +57,7 @@ if (Astro.request.method === "POST") {
 
     <div class="card form-card">
       <h2 class="card-title">Generate Your Love Letter</h2>
-      <form method="POST" enctype="application/x-www-form-urlencoded" class="form">
+      <form method="POST" class="form" id="letterForm" enctype="multipart/form-data">
         <div class="form-group">
           <label for="recipient">Recipient's Name</label>
           <input type="text" id="recipient" name="recipient" required />
@@ -367,57 +370,3 @@ if (Astro.request.method === "POST") {
     }
   }
 </style>
-
-<script>
-const form = document.querySelector("form")
-const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement | null
-
-form?.addEventListener("submit", async (e) => {
-  e.preventDefault()
-  
-  if (submitButton) {
-    submitButton.disabled = true
-    const btnText = submitButton.querySelector('.btn-text')
-    const btnIcon = submitButton.querySelector('.btn-icon')
-    if (btnText) btnText.textContent = 'Generating...'
-    if (btnIcon) btnIcon.textContent = '✨'
-  }
-
-  const formData = new FormData(form)
-  try {
-    const response = await fetch(form.action, {
-      method: 'POST',
-      body: formData
-    })
-    
-    if (!response.ok) {
-      throw new Error('Failed to generate letter')
-    }
-
-    // Refresh the page to show the result
-    window.location.reload()
-  } catch (error) {
-    console.error('Error:', error)
-    // Re-enable the submit button on error
-    if (submitButton) {
-      submitButton.disabled = false
-      const btnText = submitButton.querySelector('.btn-text')
-      const btnIcon = submitButton.querySelector('.btn-icon')
-      if (btnText) btnText.textContent = 'Generate Love Letter'
-      if (btnIcon) btnIcon.textContent = '💌'
-    }
-  }
-})
-
-// Add input animations
-const inputs = document.querySelectorAll('input, select, textarea')
-inputs.forEach(input => {
-  input.addEventListener('focus', () => {
-    input.parentElement?.classList.add('focused')
-  })
-  input.addEventListener('blur', () => {
-    input.parentElement?.classList.remove('focused')
-  })
-})
-</script>
-
