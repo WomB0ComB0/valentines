@@ -12,30 +12,38 @@ let error = ""
 
 if (Astro.request.method === "POST") {
   try {
+    console.log("Starting POST request handler")
     isLoading = true
+    
+    // Use formData instead of json
+    const formData = await Astro.request.formData();
+    const data = Object.fromEntries(formData.entries());
+    console.log("Received form data:", data);
 
-    const formData: FormData = await Astro.request.formData()
-
-    console.log("Sending data:", Object.fromEntries(formData))
-
+    console.log("Making API request to generate.json")
     const response = await fetch(`${Astro.url.origin}/api/generate.json`, {
       method: "POST",
-      body: formData,
-    })
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error("API Error:", errorText)
+      console.error("API Error Response:", errorText)
       throw new Error(`Failed to generate letter: ${errorText}`)
     }
 
+    console.log("API request successful")
     const result: GenerateResponse = await response.json()
     letter = result.letter
     console.log("Generated letter:", letter)
   } catch (e) {
-    console.error("Error:", e)
+    console.error("Error in POST handler:", e)
     error = e instanceof Error ? e.message : "An unexpected error occurred"
   } finally {
+    console.log("Request handler complete, isLoading set to false")
     isLoading = false
   }
 }
@@ -54,7 +62,7 @@ if (Astro.request.method === "POST") {
 
     <div class="card form-card">
       <h2 class="card-title">Generate Your Love Letter</h2>
-      <form method="POST" class="form" id="letterForm" enctype="multipart/form-data">
+      <form method="POST" class="form" id="letterForm">
         <div class="form-group">
           <label for="recipient">Recipient's Name</label>
           <input type="text" id="recipient" name="recipient" required />
@@ -107,6 +115,46 @@ if (Astro.request.method === "POST") {
       </div>
     )}
   </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log("DOM Content Loaded")
+      const form = document.getElementById('letterForm');
+      if (form) {
+        console.log("Form element found")
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          console.log("Form submission started")
+          
+          const formData = new FormData(e.target as HTMLFormElement);
+          
+          try {
+            console.log("Sending POST request")
+            const response = await fetch(window.location.href, {
+              method: 'POST',
+              body: formData, // Send as FormData directly
+            });
+            
+            if (!response.ok) {
+              console.error("Response not OK:", response.status)
+              throw new Error('Failed to submit form');
+            }
+            
+            console.log("Form submitted successfully, reloading page")
+            window.location.reload();
+          } catch (error) {
+            console.error('Form submission error:', error);
+            const errorDisplay = document.querySelector('.error-message') || document.createElement('div');
+            errorDisplay.className = 'error-message';
+            errorDisplay.innerHTML = `<span>${error instanceof Error ? error.message : 'An error occurred'}</span>`;
+            form.parentNode?.insertBefore(errorDisplay, form.nextSibling);
+          }
+        });
+      } else {
+        console.error("Form element not found")
+      }
+    });
+  </script>
 </Layout>
 
 <style>

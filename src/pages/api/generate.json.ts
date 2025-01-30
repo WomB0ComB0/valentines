@@ -7,33 +7,42 @@ const groq = new Groq({
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const formData = await request.formData();
-    const recipient = formData.get('recipient') as string;
-    const relationship = formData.get('relationship') as string;
-    const tone = formData.get('tone') as string;
-    const details = formData.get('details') as string;
+    console.log("Received POST request");
+    const data = await request.json();
+    console.log("Request data:", data);
+    
+    const { recipient, relationship, tone, details } = data;
 
     const prompt = `Write a ${tone} love letter to my ${relationship} named ${recipient}. ${
       details ? `Include these details: ${details}` : ''
     }`;
+    console.log("Generated prompt:", prompt);
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: 'mixtral-8x7b-32768',
     });
+    console.log("Received completion from Groq");
 
-    return new Response(JSON.stringify({
+    const response = {
       letter: completion.choices[0].message.content,
-    }), {
+    };
+    console.log("Sending response:", response);
+
+    return new Response(JSON.stringify(response), {
       status: 200,
       headers: {
         "Content-Type": "application/json"
       }
     });
   } catch (error) {
-    return new Response(JSON.stringify({
+    console.error("API Error:", error);
+    const errorResponse = {
       error: error instanceof Error ? error.message : 'An unexpected error occurred'
-    }), {
+    };
+    console.error("Error response:", errorResponse);
+    
+    return new Response(JSON.stringify(errorResponse), {
       status: 500,
       headers: {
         "Content-Type": "application/json"
