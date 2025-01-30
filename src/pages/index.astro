@@ -14,16 +14,13 @@ if (Astro.request.method === "POST") {
   try {
     isLoading = true
 
-    // Get form data directly from the request
-    const formData = await Astro.request.formData()
+    const formData: FormData = await Astro.request.formData()
 
-    // Log the data being sent
     console.log("Sending data:", Object.fromEntries(formData))
 
-    // Send the form data to the API
     const response = await fetch(`${Astro.url.origin}/api/generate.json`, {
       method: "POST",
-      body: formData, // Send FormData directly
+      body: formData,
     })
 
     if (!response.ok) {
