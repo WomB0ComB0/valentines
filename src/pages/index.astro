@@ -1,53 +1,83 @@
 ---
 import Layout from "../layouts/Layout.astro"
 import "@/styles/globals.css"
+import { z } from "zod";
 
-interface GenerateResponse {
-  letter: string
-}
+// Define form validation schema
+const FormSchema = z.object({
+  recipient: z.string().min(1, "Recipient name is required"),
+  relationship: z.enum(["partner", "crush", "spouse"], {
+    errorMap: () => ({ message: "Please select a valid relationship" })
+  }),
+  tone: z.enum(["romantic", "playful", "poetic"], {
+    errorMap: () => ({ message: "Please select a valid tone" })
+  }),
+  details: z.string().optional()
+});
+
+const GenerateResponseSchema = z.object({
+  letter: z.string()
+});
+
+type FormData = z.infer<typeof FormSchema>;
+type GenerateResponse = z.infer<typeof GenerateResponseSchema>;
 
 let letter = ""
 let isLoading = false
 let error = ""
 
+// Server-side handler
 if (Astro.request.method === "POST") {
   try {
-    console.log("Starting POST request handler")
-    isLoading = true
+    console.log("Starting POST request handler");
+    isLoading = true;
     
-    // Use formData instead of json
-    const formData = await Astro.request.formData();
-    const data = Object.fromEntries(formData.entries());
-    console.log("Received form data:", data);
+    // Parse JSON instead of FormData
+    const data = await Astro.request.json();
+    console.log("Received data:", data);
 
-    console.log("Making API request to generate.json")
+    // Validate the input data
+    const validatedData = FormSchema.parse(data);
+
+    console.log("Making API request to generate.json");
     const response = await fetch(`${Astro.url.origin}/api/generate.json`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify(validatedData)
     });
 
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error("API Error Response:", errorText)
-      throw new Error(`Failed to generate letter: ${errorText}`)
+      throw new Error(`API request failed with status ${response.status}`);
     }
 
-    console.log("API request successful")
-    const result: GenerateResponse = await response.json()
-    letter = result.letter
-    console.log("Generated letter:", letter)
+    const responseData = await response.json();
+    
+    // Send JSON response back to client
+    return new Response(JSON.stringify({ 
+      success: true, 
+      letter: responseData.letter 
+    }), {
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+
   } catch (e) {
-    console.error("Error in POST handler:", e)
-    error = e instanceof Error ? e.message : "An unexpected error occurred"
-  } finally {
-    console.log("Request handler complete, isLoading set to false")
-    isLoading = false
+    console.error("Error in POST handler:", e);
+    // Send error response as JSON
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: e instanceof Error ? e.message : "An unexpected error occurred" 
+    }), {
+      status: 400,
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
   }
 }
-
 ---
 
 <Layout title="Love Letter Generator">
@@ -118,40 +148,82 @@ if (Astro.request.method === "POST") {
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      console.log("DOM Content Loaded")
-      const form = document.getElementById('letterForm');
+      console.log("DOM Content Loaded");
+      const form = document.getElementById('letterForm') as HTMLFormElement;
+      const letterDisplay = document.querySelector('.letter-card') as HTMLElement;
+      const errorDisplay = document.querySelector('.error-message') as HTMLElement;
+      
       if (form) {
-        console.log("Form element found")
+        console.log("Form element found");
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
-          console.log("Form submission started")
+          console.log("Form submission started");
+          
+          const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+          if (submitButton) {
+            submitButton.disabled = true;
+            if (submitButton.querySelector('.btn-text')) {
+              submitButton.querySelector('.btn-text')!.textContent = 'Generating...';
+            }
+          }
+          
+          if (errorDisplay) {
+            (errorDisplay as HTMLElement).style.display = 'none';
+          }
+          if (letterDisplay) {
+            (letterDisplay as HTMLElement).style.display = 'none';
+          }
           
           const formData = new FormData(e.target as HTMLFormElement);
+          const jsonData = Object.fromEntries(formData);
+          console.log("Form data:", jsonData);
           
           try {
-            console.log("Sending POST request")
+            console.log("Sending POST request");
             const response = await fetch(window.location.href, {
               method: 'POST',
-              body: formData, // Send as FormData directly
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(jsonData),
             });
             
-            if (!response.ok) {
-              console.error("Response not OK:", response.status)
-              throw new Error('Failed to submit form');
+            console.log("Response status:", response.status);
+            const responseData = await response.json();
+            console.log("Response data:", responseData);
+            
+            if (!responseData.success) {
+              throw new Error(responseData.error || 'Failed to generate letter');
             }
             
-            console.log("Form submitted successfully, reloading page")
-            window.location.reload();
+            if (letterDisplay) {
+              const letterContent = letterDisplay.querySelector('.letter-content p');
+              if (letterContent) {
+                letterContent.textContent = responseData.letter;
+                (letterDisplay as HTMLElement).style.display = 'block';
+              }
+            }
+            
           } catch (error) {
             console.error('Form submission error:', error);
-            const errorDisplay = document.querySelector('.error-message') || document.createElement('div');
-            errorDisplay.className = 'error-message';
-            errorDisplay.innerHTML = `<span>${error instanceof Error ? error.message : 'An error occurred'}</span>`;
-            form.parentNode?.insertBefore(errorDisplay, form.nextSibling);
+            if (errorDisplay) {
+              (errorDisplay as HTMLElement).style.display = 'block';
+              const span = errorDisplay.querySelector('span');
+              if (span) {
+                span.textContent = error instanceof Error ? error.message : 'An error occurred';
+              }
+            }
+          } finally {
+            if (submitButton) {
+              submitButton.disabled = false;
+              if (submitButton.querySelector('.btn-text')) {
+                submitButton.querySelector('.btn-text')!.textContent = 'Generate Love Letter';
+              }
+            }
           }
         });
       } else {
-        console.error("Form element not found")
+        console.error("Form element not found");
       }
     });
   </script>
