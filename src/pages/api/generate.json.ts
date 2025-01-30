@@ -1,10 +1,8 @@
-import OpenAI from 'openai';
+import { Groq } from 'groq-sdk';
 import type { APIRoute } from "astro";
 
-console.info(process.env.OPENAI_API_KEY)
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const groq = new Groq({
+  apiKey: import.meta.env.GROQ_API_KEY,
 });
 
 export const POST: APIRoute = async ({ request }) => {
@@ -14,9 +12,9 @@ export const POST: APIRoute = async ({ request }) => {
     details ? `Include these details: ${details}` : ''
   }`;
 
-  const completion = await openai.chat.completions.create({
+  const completion = await groq.chat.completions.create({
     messages: [{ role: 'user', content: prompt }],
-    model: '',
+    model: 'mixtral-8x7b-32768',
   });
 
   return new Response(JSON.stringify({
