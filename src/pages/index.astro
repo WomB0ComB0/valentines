@@ -5,14 +5,14 @@ import { z } from "zod";
 
 // Define form validation schema
 const FormSchema = z.object({
-  recipient: z.string().min(1, "Recipient name is required"),
+  recipient: z.string().min(1, "Recipient name is required").max(50, "Recipient name too long"),
   relationship: z.enum(["partner", "crush", "spouse"], {
     errorMap: () => ({ message: "Please select a valid relationship" })
   }),
   tone: z.enum(["romantic", "playful", "poetic"], {
     errorMap: () => ({ message: "Please select a valid tone" })
   }),
-  details: z.string().optional()
+  details: z.string().max(500, "Details too long").optional()
 });
 
 const GenerateResponseSchema = z.object({
@@ -29,32 +29,33 @@ let error = ""
 // Server-side handler
 if (Astro.request.method === "POST") {
   try {
-    console.log("Starting POST request handler");
     isLoading = true;
     
-    // Parse JSON instead of FormData
-    const data = await Astro.request.json();
-    console.log("Received data:", data);
+    const rawData = await Astro.request.text();
+    const data = JSON.parse(rawData);
 
     // Validate the input data
-    const validatedData = FormSchema.parse(data);
+    const validatedData = FormSchema.safeParse(data);
+    
+    if (!validatedData.success) {
+      throw new Error(validatedData.error.errors[0].message);
+    }
 
-    console.log("Making API request to generate.json");
     const response = await fetch(`${Astro.url.origin}/api/generate.json`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(validatedData)
+      body: JSON.stringify(validatedData.data)
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API request failed with status ${response.status}`);
     }
 
     const responseData = await response.json();
     
-    // Send JSON response back to client
     return new Response(JSON.stringify({ 
       success: true, 
       letter: responseData.letter 
@@ -65,8 +66,6 @@ if (Astro.request.method === "POST") {
     });
 
   } catch (e) {
-    console.error("Error in POST handler:", e);
-    // Send error response as JSON
     return new Response(JSON.stringify({ 
       success: false, 
       error: e instanceof Error ? e.message : "An unexpected error occurred" 
@@ -76,8 +75,14 @@ if (Astro.request.method === "POST") {
         "Content-Type": "application/json"
       }
     });
+  } finally {
+    isLoading = false;
   }
 }
+
+if (!letter) letter = "";
+if (!error) error = "";
+if (!isLoading) isLoading = false;
 ---
 
 <Layout title="Love Letter Generator">
@@ -136,28 +141,28 @@ if (Astro.request.method === "POST") {
       </div>
     )}
 
-    {letter && (
-      <div class="card letter-card">
-        <h2 class="card-title">Your Love Letter</h2>
-        <div class="letter-content">
-          <p>{letter}</p>
-        </div>
+
+    <div class="card letter-card">
+      <h2 class="card-title">Your Love Letter</h2>
+      <div class="letter-content">
+        <button class="copy-btn" aria-label="Copy letter to clipboard">
+          <span class="copy-icon">📋</span>
+          <span class="copy-text">Copy</span>
+        </button>
+        <p>{letter}</p>
       </div>
-    )}
+    </div>
   </main>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      console.log("DOM Content Loaded");
       const form = document.getElementById('letterForm') as HTMLFormElement;
       const letterDisplay = document.querySelector('.letter-card') as HTMLElement;
       const errorDisplay = document.querySelector('.error-message') as HTMLElement;
       
       if (form) {
-        console.log("Form element found");
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
-          console.log("Form submission started");
           
           const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
           if (submitButton) {
@@ -167,19 +172,14 @@ if (Astro.request.method === "POST") {
             }
           }
           
-          if (errorDisplay) {
-            (errorDisplay as HTMLElement).style.display = 'none';
-          }
-          if (letterDisplay) {
-            (letterDisplay as HTMLElement).style.display = 'none';
-          }
+          // Reset displays
+          if (errorDisplay) errorDisplay.style.display = 'none';
+          if (letterDisplay) letterDisplay.style.display = 'none';
           
-          const formData = new FormData(e.target as HTMLFormElement);
+          const formData = new FormData(form);
           const jsonData = Object.fromEntries(formData);
-          console.log("Form data:", jsonData);
           
           try {
-            console.log("Sending POST request");
             const response = await fetch(window.location.href, {
               method: 'POST',
               headers: {
@@ -188,26 +188,32 @@ if (Astro.request.method === "POST") {
               body: JSON.stringify(jsonData),
             });
             
-            console.log("Response status:", response.status);
             const responseData = await response.json();
-            console.log("Response data:", responseData);
             
-            if (!responseData.success) {
-              throw new Error(responseData.error || 'Failed to generate letter');
+            if (!response.ok || !responseData.success) {
+              throw new Error(responseData.error || `Request failed with status ${response.status}`);
             }
             
+            // Update letter display with formatted content
             if (letterDisplay) {
-              const letterContent = letterDisplay.querySelector('.letter-content p');
+              const letterContent = letterDisplay.querySelector('.letter-content p') as HTMLParagraphElement;
               if (letterContent) {
-                letterContent.textContent = responseData.letter;
-                (letterDisplay as HTMLElement).style.display = 'block';
+                // Format the letter with proper line breaks
+                const formattedLetter = responseData.letter
+                  .split('\n')
+                  .filter((line: string) => line.trim() !== '')
+                  .join('\n\n');
+                
+                letterContent.textContent = formattedLetter;
+                letterContent.style.whiteSpace = 'pre-wrap';
+                letterDisplay.style.display = 'block';
+                letterDisplay.scrollIntoView({ behavior: 'smooth' });
               }
             }
             
           } catch (error) {
-            console.error('Form submission error:', error);
             if (errorDisplay) {
-              (errorDisplay as HTMLElement).style.display = 'block';
+              errorDisplay.style.display = 'block';
               const span = errorDisplay.querySelector('span');
               if (span) {
                 span.textContent = error instanceof Error ? error.message : 'An error occurred';
@@ -222,8 +228,33 @@ if (Astro.request.method === "POST") {
             }
           }
         });
-      } else {
-        console.error("Form element not found");
+      }
+
+      // Add copy to clipboard functionality
+      const copyBtn = document.querySelector('.copy-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', async () => {
+          const letterContent = document.querySelector('.letter-content p');
+          if (letterContent) {
+            try {
+              await navigator.clipboard.writeText(letterContent.textContent || '');
+              const copyText = copyBtn.querySelector('.copy-text');
+              if (copyText) {
+                const originalText = copyText.textContent;
+                copyText.textContent = 'Copied!';
+                copyBtn.classList.add('copied');
+                
+                // Reset button text after 2 seconds
+                setTimeout(() => {
+                  copyText.textContent = originalText;
+                  copyBtn.classList.remove('copied');
+                }, 2000);
+              }
+            } catch (err) {
+              // Silently fail if copy fails
+            }
+          }
+        });
       }
     });
   </script>
@@ -384,6 +415,11 @@ if (Astro.request.method === "POST") {
   .letter-card {
     background: #fff9f0;
     border: 1px solid #ffe4cc;
+    display: none;
+  }
+
+  .letter-card.visible {
+    display: block !important;
   }
 
   .letter-content {
@@ -394,6 +430,12 @@ if (Astro.request.method === "POST") {
     background: linear-gradient(0deg, #fff9f0 0%, #ffffff 100%);
     border-radius: 8px;
     position: relative;
+    white-space: pre-wrap;
+  }
+
+  .letter-content p {
+    margin: 0;
+    white-space: pre-wrap;
   }
 
   .letter-content::before {
@@ -485,6 +527,54 @@ if (Astro.request.method === "POST") {
 
     .card {
       padding: 1.5rem;
+    }
+  }
+
+  .letter-content {
+    position: relative; /* For copy button positioning */
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    color: #666;
+    z-index: 1;
+  }
+
+  .copy-btn:hover {
+    background: #f5f5f5;
+    border-color: #ccc;
+  }
+
+  .copy-btn.copied {
+    background: #4CAF50;
+    color: white;
+    border-color: #4CAF50;
+  }
+
+  .copy-icon {
+    font-size: 1.1em;
+  }
+
+  .copy-text {
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  @media (max-width: 640px) {
+    .copy-btn {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
     }
   }
 </style>

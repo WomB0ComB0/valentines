@@ -4,6 +4,7 @@ import { defineConfig } from 'astro/config';
 import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
+  output: 'server',
   adapter: cloudflare({
     platformProxy: {
       enabled: true
@@ -11,7 +12,7 @@ export default defineConfig({
   }),
   vite: {
     ssr: {
-      noExternal: ['dotenv']
+      noExternal: ['dotenv', 'zod']
     }
   }
 });

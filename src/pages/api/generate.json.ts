@@ -22,12 +22,10 @@ Do not include any explicit or inappropriate content. Focus on expressing genuin
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    console.log("Received POST request");
     const rawData = await request.json();
     if (!rawData) {
-  throw new Error("Request body is empty");
-}
-    console.log("Request data:", rawData);
+      throw new Error("Request body is empty");
+    }
 
     const data = RequestSchema.parse(rawData);
     const { recipient, relationship, tone, details } = data;
@@ -39,7 +37,6 @@ export const POST: APIRoute = async ({ request }) => {
 Write a ${tone} love letter to my ${relationship} named ${sanitizedRecipient}. ${
       sanitizedDetails ? `Include these details: ${sanitizedDetails}` : ''
     }`;
-    console.log("Generated prompt:", prompt);
 
     const completion = await groq.chat.completions.create({
       messages: [
@@ -50,12 +47,10 @@ Write a ${tone} love letter to my ${relationship} named ${sanitizedRecipient}. $
       temperature: 0.7,
       max_tokens: 1000,
     });
-    console.log("Received completion from Groq");
 
     const response = {
       letter: completion.choices[0].message.content,
     };
-    console.log("Sending response:", response);
 
     return new Response(JSON.stringify(response), {
       status: 200,
@@ -64,13 +59,11 @@ Write a ${tone} love letter to my ${relationship} named ${sanitizedRecipient}. $
       }
     });
   } catch (error) {
-    console.error("API Error:", error);
     const errorResponse = {
       error: error instanceof z.ZodError 
         ? error.errors.map(e => e.message).join(", ")
         : error instanceof Error ? error.message : 'An unexpected error occurred'
     };
-    console.error("Error response:", errorResponse);
     
     return new Response(JSON.stringify(errorResponse), {
       status: error instanceof z.ZodError ? 400 : 500,
