@@ -1,3 +1,6 @@
+/// <reference path="../.astro/types.d.ts" />
+/// <reference types="astro/client" />
+
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
@@ -5,3 +8,5 @@ declare global {
     }
   }
 }
+
+export { }

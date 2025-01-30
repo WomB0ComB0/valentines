@@ -1,75 +1,131 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { letterAtom } from '@/store';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import '@/styles/globals.css';
 
-const { letter, setLetter } = letterAtom;
-const [isLoading, setIsLoading] = useState(false);
+interface GenerateResponse {
+  letter: string;
+}
 
-async function generateLetter(event) {
-  event.preventDefault();
-  setIsLoading(true);
+let letter = '';
+let isLoading = false;
+let error = '';
 
-  const formData = new FormData(event.target);
-  const recipient = formData.get('recipient');
-  const relationship = formData.get('relationship');
-  const tone = formData.get('tone');
-  const details = formData.get('details');
+if (Astro.request.method === 'POST') {
+  try {
+    isLoading = true;
+    const data = await Astro.request.formData();
+    const recipient = data.get('recipient');
+    const relationship = data.get('relationship');
+    const tone = data.get('tone');
+    const details = data.get('details');
 
-  const response = await fetch('/api/generate', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ recipient, relationship, tone, details }),
-  });
+    const response = await fetch(`${Astro.url}api/generate.json`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ recipient, relationship, tone, details }),
+    });
 
-  const data = await response.json();
-  setLetter(data.letter);
-  setIsLoading(false);
+    if (!response.ok) {
+      throw new Error('Failed to generate letter');
+    }
+
+    const result: GenerateResponse = await response.json();
+    letter = result.letter;
+  } catch (e) {
+    error = e instanceof Error ? e.message : 'An unexpected error occurred';
+  } finally {
+    isLoading = false;
+  }
 }
 ---
 
-<Layout>
-  <h1>Love Letter Generator</h1>
-  <form onSubmit={generateLetter}>
-    <label>
-      Recipient's Name:
-      <input type="text" name="recipient" required />
-    </label>
-    
-    <label>
-      Your Relationship:
-      <select name="relationship" required>
-        <option value="partner">Partner</option>
-        <option value="crush">Crush</option>
-        <option value="spouse">Spouse</option>
-      </select>
-    </label>
-    
-    <label>
-      Tone:
-      <select name="tone" required>
-        <option value="romantic">Romantic</option>
-        <option value="playful">Playful</option>
-        <option value="poetic">Poetic</option>
-      </select>
-    </label>
-    
-    <label>
-      Special Details:
-      <textarea name="details" placeholder="Include any special memories or details..."></textarea>
-    </label>
-    
-    <button type="submit" disabled={isLoading}>
-      {isLoading ? 'Generating...' : 'Generate Love Letter'}
-    </button>
-  </form>
+<Layout title="Love Letter Generator">
+  <main class="container mx-auto px-4 py-8 min-h-screen">
+    <h1 class="text-4xl font-bold text-center mb-8">
+      <span class="inline-block w-8 h-8 mr-2">❤️</span>
+      Love Letter Generator
+    </h1>
 
-  {letter && (
-    <div class="letter-output">
-      <h2>Your Love Letter</h2>
-      <p>{letter}</p>
-    </div>
-  )}
+    <Card className="max-w-lg mx-auto">
+      <CardHeader>
+        <CardTitle>Generate Your Love Letter</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form method="POST" class="space-y-6">
+          <div class="space-y-2">
+            <Label htmlFor="recipient">Recipient's Name</Label>
+            <Input type="text" id="recipient" name="recipient" required />
+          </div>
+
+          <div class="space-y-2">
+            <Label htmlFor="relationship">Your Relationship</Label>
+            <select id="relationship" name="relationship" required class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+              <option value="" disabled selected>Select relationship</option>
+              <option value="partner">Partner</option>
+              <option value="crush">Crush</option>
+              <option value="spouse">Spouse</option>
+            </select>
+          </div>
+
+          <div class="space-y-2">
+            <Label htmlFor="tone">Tone</Label>
+            <select id="tone" name="tone" required class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+              <option value="" disabled selected>Select tone</option>
+              <option value="romantic">Romantic</option>
+              <option value="playful">Playful</option>
+              <option value="poetic">Poetic</option>
+            </select>
+          </div>
+
+          <div class="space-y-2">
+            <Label htmlFor="details">Special Details</Label>
+            <Textarea id="details" name="details" placeholder="Include any special memories or details..." />
+          </div>
+
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Generating...' : 'Generate Love Letter'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+
+    {error && (
+      <Alert variant="destructive" className="mt-6 max-w-lg mx-auto">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    )}
+
+    {letter && (
+      <Card className="mt-8 max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>Your Love Letter</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p class="whitespace-pre-wrap">{letter}</p>
+        </CardContent>
+      </Card>
+    )}
+  </main>
 </Layout>
+
+<script>
+  const form = document.querySelector('form');
+  const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+
+  form?.addEventListener('submit', () => {
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.innerHTML = 'Generating... <svg class="inline-block w-5 h-5 ml-2 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+    }
+  });
+</script>
+
