@@ -3,7 +3,6 @@ import Layout from "../layouts/Layout.astro"
 import "@/styles/globals.css"
 import { z } from "zod";
 
-// Define form validation schema
 const FormSchema = z.object({
   recipient: z.string().min(1, "Recipient name is required").max(50, "Recipient name too long"),
   relationship: z.enum(["partner", "crush", "spouse"], {
@@ -15,18 +14,10 @@ const FormSchema = z.object({
   details: z.string().max(500, "Details too long").optional()
 });
 
-const GenerateResponseSchema = z.object({
-  letter: z.string()
-});
-
-type FormData = z.infer<typeof FormSchema>;
-type GenerateResponse = z.infer<typeof GenerateResponseSchema>;
-
 let letter = ""
 let isLoading = false
 let error = ""
 
-// Server-side handler
 if (Astro.request.method === "POST") {
   try {
     isLoading = true;
@@ -34,7 +25,6 @@ if (Astro.request.method === "POST") {
     const rawData = await Astro.request.text();
     const data = JSON.parse(rawData);
 
-    // Validate the input data
     const validatedData = FormSchema.safeParse(data);
     
     if (!validatedData.success) {
@@ -53,8 +43,6 @@ if (Astro.request.method === "POST") {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `API request failed with status ${response.status}`);
     }
-
-    const responseData = await response.json();
     
     return new Response(JSON.stringify({ 
       success: true, 
@@ -194,11 +182,9 @@ if (!isLoading) isLoading = false;
               throw new Error(responseData.error || `Request failed with status ${response.status}`);
             }
             
-            // Update letter display with formatted content
             if (letterDisplay) {
               const letterContent = letterDisplay.querySelector('.letter-content p') as HTMLParagraphElement;
               if (letterContent) {
-                // Format the letter with proper line breaks
                 const formattedLetter = responseData.letter
                   .split('\n')
                   .filter((line: string) => line.trim() !== '')
@@ -230,7 +216,6 @@ if (!isLoading) isLoading = false;
         });
       }
 
-      // Add copy to clipboard functionality
       const copyBtn = document.querySelector('.copy-btn');
       if (copyBtn) {
         copyBtn.addEventListener('click', async () => {
@@ -244,14 +229,13 @@ if (!isLoading) isLoading = false;
                 copyText.textContent = 'Copied!';
                 copyBtn.classList.add('copied');
                 
-                // Reset button text after 2 seconds
                 setTimeout(() => {
                   copyText.textContent = originalText;
                   copyBtn.classList.remove('copied');
                 }, 2000);
               }
             } catch (err) {
-              // Silently fail if copy fails
+              alert('Failed to copy text');
             }
           }
         });
