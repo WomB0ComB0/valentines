@@ -74,6 +74,9 @@ export const POST: APIRoute = withRateLimit(async ({ request }) => {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
       },
     });
   } catch (error) {
@@ -94,3 +97,14 @@ export const POST: APIRoute = withRateLimit(async ({ request }) => {
     });
   }
 });
+
+export const OPTIONS: APIRoute = async () => {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    }
+  });
+};

@@ -46,7 +46,7 @@ export class RateLimiter {
 }
 
 export const rateLimiter = new RateLimiter({
-  maxRequests: 10, // 10 requests
+  maxRequests: 50, // 10 requests
   windowMs: 60_000, // per minute
 });
 
