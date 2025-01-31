@@ -1,6 +1,7 @@
 import { Groq } from 'groq-sdk';
 import type { APIRoute } from "astro";
 import { z } from 'zod';
+import { withRateLimit } from '@/lib/rate-limiter';
 
 const RequestSchema = z.object({
   recipient: z.string().min(1, "Recipient name is required").max(50, "Recipient name too long"),
@@ -20,7 +21,7 @@ const groq = new Groq({
 const safetyPrompt: string = `You are a respectful love letter writer. Keep the content tasteful and appropriate. 
 Do not include any explicit or inappropriate content. Focus on expressing genuine emotions and feelings.`;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = withRateLimit(async ({ request }) => {
   try {
     const rawData = await request.json();
     if (!rawData) {
@@ -72,4 +73,4 @@ Write a ${tone} love letter to my ${relationship} named ${sanitizedRecipient}. $
       }
     });
   }
-}
+});

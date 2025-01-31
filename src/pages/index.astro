@@ -178,6 +178,14 @@ if (!isLoading) isLoading = false;
             
             const responseData = await response.json();
             
+            if (response.status === 429) {
+              const retryAfter = response.headers.get('Retry-After') || '60';
+              const remainingTime = parseInt(retryAfter, 10);
+              throw new Error(
+                `Too many requests. Please wait ${remainingTime} seconds before trying again.`
+              );
+            }
+            
             if (!response.ok || !responseData.success) {
               throw new Error(responseData.error || `Request failed with status ${response.status}`);
             }
@@ -202,7 +210,13 @@ if (!isLoading) isLoading = false;
               errorDisplay.style.display = 'block';
               const span = errorDisplay.querySelector('span');
               if (span) {
-                span.textContent = error instanceof Error ? error.message : 'An error occurred';
+                const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+                span.textContent = errorMessage;
+                
+                // Add error styling for rate limit messages
+                if (errorMessage.includes('Too many requests')) {
+                  span.classList.add('rate-limit-error');
+                }
               }
             }
           } finally {
