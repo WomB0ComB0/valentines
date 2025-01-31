@@ -1,75 +1,80 @@
 ---
-import Layout from "../layouts/Layout.astro"
-import "@/styles/globals.css"
-import { z } from "zod";
+import Layout from '../layouts/Layout.astro';
+import '@/styles/globals.css';
+import { z } from 'zod';
 
 const FormSchema = z.object({
-  recipient: z.string().min(1, "Recipient name is required").max(50, "Recipient name too long"),
-  relationship: z.enum(["partner", "crush", "spouse"], {
-    errorMap: () => ({ message: "Please select a valid relationship" })
+  recipient: z.string().min(1, 'Recipient name is required').max(50, 'Recipient name too long'),
+  relationship: z.enum(['partner', 'crush', 'spouse'], {
+    errorMap: () => ({ message: 'Please select a valid relationship' }),
   }),
-  tone: z.enum(["romantic", "playful", "poetic"], {
-    errorMap: () => ({ message: "Please select a valid tone" })
+  tone: z.enum(['romantic', 'playful', 'poetic'], {
+    errorMap: () => ({ message: 'Please select a valid tone' }),
   }),
-  details: z.string().max(500, "Details too long").optional()
+  details: z.string().max(500, 'Details too long').optional(),
 });
 
-let letter = ""
-let isLoading = false
-let error = ""
+let letter = '';
+let isLoading = false;
+let error = '';
 
-if (Astro.request.method === "POST") {
+if (Astro.request.method === 'POST') {
   try {
     isLoading = true;
-    
+
     const rawData = await Astro.request.text();
     const data = JSON.parse(rawData);
 
     const validatedData = FormSchema.safeParse(data);
-    
+
     if (!validatedData.success) {
       throw new Error(validatedData.error.errors[0].message);
     }
 
     const response = await fetch(`${Astro.url.origin}/api/generate.json`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json"
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(validatedData.data)
+      body: JSON.stringify(validatedData.data),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `API request failed with status ${response.status}`);
     }
-    
-    return new Response(JSON.stringify({ 
-      success: true, 
-      letter: responseData.letter 
-    }), {
-      headers: {
-        "Content-Type": "application/json"
-      }
-    });
 
+    return new Response(
+      JSON.stringify({
+        success: true,
+        letter: responseData.letter,
+      }),
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   } catch (e) {
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: e instanceof Error ? e.message : "An unexpected error occurred" 
-    }), {
-      status: 400,
-      headers: {
-        "Content-Type": "application/json"
-      }
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: e instanceof Error ? e.message : 'An unexpected error occurred',
+      }),
+      {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   } finally {
     isLoading = false;
   }
 }
 
-if (!letter) letter = "";
-if (!error) error = "";
+if (!letter) letter = '';
+if (!error) error = '';
 if (!isLoading) isLoading = false;
 ---
 

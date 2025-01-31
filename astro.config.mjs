@@ -7,12 +7,12 @@ export default defineConfig({
   output: 'server',
   adapter: cloudflare({
     platformProxy: {
-      enabled: true
-    }
+      enabled: true,
+    },
   }),
   vite: {
     ssr: {
-      noExternal: ['dotenv', 'zod']
-    }
-  }
+      noExternal: ['dotenv', 'zod'],
+    },
+  },
 });

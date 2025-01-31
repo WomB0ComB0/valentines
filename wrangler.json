@@ -6,9 +6,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "valentines",
   "compatibility_date": "2025-01-29",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "pages_build_output_dir": "./dist",
   "observability": {
     "enabled": true
