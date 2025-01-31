@@ -21,12 +21,12 @@ let error = '';
 if (Astro.request.method === 'POST') {
   try {
     isLoading = true;
-
+    
     const rawData = await Astro.request.text();
     const data = JSON.parse(rawData);
 
     const validatedData = FormSchema.safeParse(data);
-
+    
     if (!validatedData.success) {
       throw new Error(validatedData.error.errors[0].message);
     }
@@ -34,40 +34,37 @@ if (Astro.request.method === 'POST') {
     const response = await fetch(`${Astro.url.origin}/api/generate.json`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(validatedData.data),
+      body: JSON.stringify(validatedData.data)
     });
 
+    const responseData = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `API request failed with status ${response.status}`);
+      throw new Error(responseData.error || `API request failed with status ${response.status}`);
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        letter: responseData.letter,
-      }),
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      },
-    );
+    return new Response(JSON.stringify({ 
+      success: true, 
+      letter: responseData.letter 
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
   } catch (e) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: e instanceof Error ? e.message : 'An unexpected error occurred',
-      }),
-      {
-        status: 400,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      },
-    );
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: e instanceof Error ? e.message : 'An unexpected error occurred' 
+    }), {
+      status: 400,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   } finally {
     isLoading = false;
   }
