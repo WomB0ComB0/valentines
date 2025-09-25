@@ -74,17 +74,17 @@ graph TD
     C -- 8. JSON Response (Letter) --> B;
     B -- 9. Display Letter --> A;
 
-    subgraph Client-Side
+    subgraph "Client-Side"
         A
         B
     end
 
-    subgraph Server-Side (Astro Application)
+    subgraph "Server-Side (Astro Application)"
         C
         D
     end
 
-    subgraph External AI Service
+    subgraph "External AI Service"
         E
         F
     end
