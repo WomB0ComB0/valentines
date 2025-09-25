@@ -150,8 +150,8 @@ Before you begin, ensure you have the following installed:
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/your-username/valentines-ai-love-letter-generator.git
-    cd valentines-ai-love-letter-generator
+    git clone https://github.com/WomB0ComB0/valentines.git
+    cd valentines
     ```
 
 2.  **Install dependencies:**
