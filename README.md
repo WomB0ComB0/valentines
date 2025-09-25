@@ -310,8 +310,9 @@ We welcome contributions to improve the Valentines AI Love Letter Generator!
 1.  **Fork the repository:** Start by forking the project to your GitHub account.
 2.  **Clone your fork:**
     ```bash
-    git clone https://github.com/your-username/valentines-ai-love-letter-generator.git
-    cd valentines-ai-love-letter-generator
+    git clone https://github.com/WomB0ComB0/valentines
+.git
+    cd valentines
     ```
 3.  **Create a new branch:**
     ```bash
@@ -367,7 +368,7 @@ This project relies on the amazing work of many open-source projects and communi
 
 ### Contact
 
-For any questions, suggestions, or collaborations, please open an issue on the [GitHub repository](https://github.com/your-username/valentines-ai-love-letter-generator/issues).
+For any questions, suggestions, or collaborations, please open an issue on the [GitHub repository](https://github.com/WomB0ComB0/valentines/issues).
 
 [Back to top](#%EF%B8%8F-table-of-contents)
 
