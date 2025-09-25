@@ -59,7 +59,7 @@ export const POST: APIRoute = withRateLimit(async ({ request }) => {
           content: sanitizedPrompt,
         },
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
       temperature: 0.7,
       max_tokens: 1000,
     });
