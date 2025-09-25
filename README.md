@@ -310,8 +310,7 @@ We welcome contributions to improve the Valentines AI Love Letter Generator!
 1.  **Fork the repository:** Start by forking the project to your GitHub account.
 2.  **Clone your fork:**
     ```bash
-    git clone https://github.com/WomB0ComB0/valentines
-.git
+    git clone https://github.com/WomB0ComB0/valentines.git
     cd valentines
     ```
 3.  **Create a new branch:**
